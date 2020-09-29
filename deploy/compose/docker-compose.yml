@@ -1,0 +1,134 @@
+version: '3.5'
+x-logging:
+  &default-logging
+  options:
+    max-size: "100M"
+services:
+  frontend:
+    image: founder/zy-frontend:1.0.0-SNAPSHOT
+    restart: always
+    logging: *default-logging
+    ports:
+      - "8080:80"
+    depends_on:
+      - kmcms
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/localtime:/etc/timezone:ro
+    environment:
+      KMCMS_HOST: kmcms
+      KMCMS_PORT: 8080
+      KMCMS_PATH: /
+      PREFIX: /zhiyuan
+  # 知识管理
+  kmcms:
+    image: founder/ks-cms-web:3.2.2-zy-SNAPSHOT
+    restart: always
+    logging: *default-logging
+    expose:
+      - "8080"
+    depends_on:
+      - sqlserver
+      - mongo
+      - gstore
+      - classify
+      - entity
+      - relation
+      - mysql
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/localtime:/etc/timezone:ro
+      - ./datas/kmcms/files:/home/zhihui/upload/
+    environment:
+      JAVA_OPTS: -Xms2048m -Xmx2048m
+      SPRING_PROFILES_ACTIVE: docker,zhiyuan
+      PROXY_FLAG: "false"
+#      DB_DATABASE: ${DB_NAME_KMCMS:-kmcms}
+#      DB_IP: ${SQL_SERVER_IP:-sqlserver}
+#      DB_USERNAME: ${SQL_SERVER_USER:-sa}
+#      DB_PASSWORD: ${SQL_SERVER_PASS:-Founder123}
+      DB_DATABASE: ${DB_NAME_KMCMS:-kmcms}
+      DB_IP: ${MYSQL_IP:-mysql}
+      DB_USERNAME: ${MYSQL_USER:-root}
+      DB_PASSWORD: ${MYSQL_PASS:-Founder123}
+  sqlserver:
+    image: microsoft/mssql-server-linux:2017-latest
+    restart: always
+    logging: *default-logging
+    ports:
+      - "1433:1433"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/localtime:/etc/timezone:ro
+      - ./datas/sqlserver:/var/opt/mssql
+    environment:
+      # Express,Developer
+      MSSQL_PID: Express
+      ACCEPT_EULA: Y
+      MSSQL_COLLATION: Chinese_PRC_CI_AS
+      MSSQL_SA_PASSWORD: Founder123
+  mysql:
+    image: mysql:5.6
+    restart: always
+    logging: *default-logging
+    ports:
+      - "3306:3306"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/localtime:/etc/timezone:ro
+      - ./datas/mysql:/var/lib/mysql
+    environment:
+      MYSQL_USER: root
+      MYSQL_ROOT_PASSWORD: Founder123
+    command: mysqld --skip-name-resolve --lower_case_table_names=1 --skip-ssl --character_set_server=utf8 --explicit_defaults_for_timestamp --max_connections=1000 --sql_mode=STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+  mongo:
+    image: mongo:3.4
+    restart: always
+    logging: *default-logging
+    ports:
+      - "27017:27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/localtime:/etc/timezone:ro
+      - ./datas/mongo:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: Founder123
+  gstore:
+    image: prodb/gstore:2.0
+    restart: always
+    logging: *default-logging
+    ports:
+      - "9000:9000"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/localtime:/etc/timezone:ro
+      - ./datas/gstore:/app/gstore/allData
+    command: sh -c "cd /app/gstore && [ -d allData/kmcmsTrunk.db ] && echo ======kmcmsTrunk || bin/gbuild kmcmsTrunk /adb-07-31.n3 && bin/ghttp"
+  classify:
+    image: prodb/classify:1.0
+    restart: always
+    logging: *default-logging
+    expose:
+      - "12355"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/localtime:/etc/timezone:ro
+  entity:
+    image: prodb/entity:1.0
+    restart: always
+    logging: *default-logging
+    expose:
+      - "11111"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/localtime:/etc/timezone:ro
+  relation:
+    image: prodb/relation:1.0
+    restart: always
+    logging: *default-logging
+    expose:
+      - "12345"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/localtime:/etc/timezone:ro
